@@ -6,12 +6,15 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.turkisi.barinakta.api.error.EntityNotFoundException;
 import org.turkisi.barinakta.api.model.*;
+import org.turkisi.barinakta.api.model.request.BreedRequestModel;
+import org.turkisi.barinakta.api.model.request.SpeciesRequestModel;
 import org.turkisi.barinakta.api.repo.AnimalFriendRepository;
 import org.turkisi.barinakta.api.repo.BreedRepository;
 import org.turkisi.barinakta.api.repo.ShelterRepository;
 import org.turkisi.barinakta.api.repo.SpeciesRepository;
 
 import java.net.URI;
+import java.util.Arrays;
 
 /**
  * @author Gökalp Gürbüzer (gokalp.gurbuzer@yandex.com)
@@ -20,17 +23,22 @@ import java.net.URI;
 @RequestMapping("/pet")
 public class AnimalFriendController {
 
-    @Autowired
     private AnimalFriendRepository animalFriendRepository;
 
-    @Autowired
     private BreedRepository breedRepository;
 
-    @Autowired
     private SpeciesRepository speciesRepository;
 
-    @Autowired
     private ShelterRepository shelterRepository;
+
+    public AnimalFriendController(AnimalFriendRepository animalFriendRepository, BreedRepository breedRepository,
+                                  SpeciesRepository speciesRepository, ShelterRepository shelterRepository) {
+
+        this.animalFriendRepository = animalFriendRepository;
+        this.breedRepository = breedRepository;
+        this.speciesRepository = speciesRepository;
+        this.shelterRepository = shelterRepository;
+    }
 
     @RequestMapping(path = "", consumes = "application/json", method = RequestMethod.POST)
     public ResponseEntity<Void> savePet(AnimalFriend animalFriend, Long shelterId) throws EntityNotFoundException {
@@ -71,19 +79,20 @@ public class AnimalFriendController {
     }
 
     @RequestMapping(path = "/{animalFriendId}", method = RequestMethod.GET)
-    public AnimalFriend getPet(@PathVariable("animalFriendId") Long animalFriendId) {
+    public @ResponseBody AnimalFriend getPet(@PathVariable("animalFriendId") Long animalFriendId) {
 
         return animalFriendRepository.findOne(animalFriendId);
     }
 
     @RequestMapping(path = "", method = RequestMethod.GET)
-    public Iterable<AnimalFriend> getAvailablePets() {
+    public @ResponseBody Iterable<AnimalFriend> getAvailablePets() {
 
         return animalFriendRepository.findByStatus(AnimalFriendStatus.AVAILABLE);
     }
 
     @RequestMapping(path = "/{animalFriendId}", consumes = "application/json", method = RequestMethod.PATCH)
-    public AnimalFriend setPetStatus(@PathVariable("animalFriendId") Long animalFriendId, @RequestBody AnimalFriendStatus status) throws EntityNotFoundException {
+    public @ResponseBody AnimalFriend setPetStatus(@PathVariable("animalFriendId") Long animalFriendId,
+                                                   @RequestBody AnimalFriendStatus status) throws EntityNotFoundException {
 
         AnimalFriend dbEntity = animalFriendRepository.findOne(animalFriendId);
         if (dbEntity == null) {
@@ -95,9 +104,22 @@ public class AnimalFriendController {
     }
 
     @RequestMapping(path = "/species", consumes = "application/json", method = RequestMethod.POST)
-    public ResponseEntity<Void> saveSpecies(Species species) {
+    public ResponseEntity<Void> saveSpecies(@RequestBody SpeciesRequestModel species) throws EntityNotFoundException {
 
-        Species savedEntity = speciesRepository.save(species);
+        Species entity = new Species();
+        entity.setName(species.getName());
+
+        Iterable<Breed> breeds = breedRepository.findAll(Arrays.asList(species.getBreedIds()));
+
+        entity.setName(species.getName());
+        entity.getBreeds().clear();
+        breeds.forEach(entity.getBreeds()::add);
+
+        if (entity.getBreeds().size() != species.getBreedIds().length) {
+            throw new EntityNotFoundException("At least one of the breeds is not found on DB");
+        }
+
+        Species savedEntity = speciesRepository.save(entity);
 
         return ResponseEntity.created(URI.create("/pet/species/" + savedEntity.getId())).build();
     }
@@ -105,15 +127,22 @@ public class AnimalFriendController {
     @RequestMapping(path = "/species/{speciesId}", consumes = "application/json", method = RequestMethod.POST)
     public
     @ResponseBody
-    Species updateSpecies(Long speciesId, Species species) throws EntityNotFoundException {
+    Species updateSpecies(@PathVariable("speciesId") Long speciesId, @RequestBody SpeciesRequestModel species) throws EntityNotFoundException {
 
         Species dbEntity = speciesRepository.findOne(speciesId);
         if (dbEntity == null) {
             throw new EntityNotFoundException("No species with ID " + speciesId);
         }
 
+        Iterable<Breed> breeds = breedRepository.findAll(Arrays.asList(species.getBreedIds()));
+
         dbEntity.setName(species.getName());
-        dbEntity.setBreeds(species.getBreeds());
+        dbEntity.getBreeds().clear();
+        breeds.forEach(dbEntity.getBreeds()::add);
+
+        if (dbEntity.getBreeds().size() != species.getBreedIds().length) {
+            throw new EntityNotFoundException("At least one of the breeds is not found on DB");
+        }
 
         return speciesRepository.save(dbEntity);
     }
@@ -124,5 +153,58 @@ public class AnimalFriendController {
     Iterable<Species> getAllSpecies() {
 
         return speciesRepository.findAll();
+    }
+
+    @RequestMapping(path = "/breed", method = RequestMethod.GET)
+    public @ResponseBody Iterable<Breed> getAllBreeds() {
+
+        return breedRepository.findAll();
+    }
+
+    @RequestMapping(path = "/breed/{breedId}", method = RequestMethod.GET)
+    public @ResponseBody Breed getBreed(@PathVariable("breedId") Long breedId) {
+
+        return breedRepository.findOne(breedId);
+    }
+
+    @RequestMapping(path = "/breed", consumes = "application/json", method = RequestMethod.POST)
+    public ResponseEntity<Void> saveBreed(@RequestBody BreedRequestModel breed) throws EntityNotFoundException {
+
+        Breed entity = new Breed();
+        entity.setName(breed.getName());
+
+        Species species = speciesRepository.findOne(breed.getSpeciesId());
+        if (species == null) {
+            throw new EntityNotFoundException("No species with id " + breed.getSpeciesId());
+        }
+
+        entity.setSpecies(species);
+        Breed savedBreed = breedRepository.save(entity);
+
+        return ResponseEntity.created(URI.create("/breed/" + savedBreed.getId())).build();
+    }
+
+    @RequestMapping(path = "/breed/{breedId}")
+    public
+    @ResponseBody
+    Breed updateBreed(@PathVariable("breedId") Long breedId, @RequestBody BreedRequestModel breed) throws EntityNotFoundException {
+
+        Breed breedOnDb = breedRepository.findOne(breedId);
+        if (breedOnDb == null) {
+            throw new EntityNotFoundException("No breed with ID " + breedId);
+        }
+
+        Species species = speciesRepository.findOne(breed.getSpeciesId());
+
+        if (species == null) {
+            throw new EntityNotFoundException("No species with ID " + breed.getSpeciesId());
+        }
+
+        breedOnDb.setName(breed.getName());
+        breedOnDb.setSpecies(species);
+
+        breedRepository.save(breedOnDb);
+
+        return breedOnDb;
     }
 }
