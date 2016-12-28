@@ -1,5 +1,7 @@
 package org.turkisi.barinakta.api.crypto;
 
+import org.apache.commons.codec.binary.Base64;
+
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,7 +16,7 @@ public class HashHelper {
         MessageDigest md5 = MessageDigest.getInstance("MD5");
 
         byte[] digest = md5.digest(applySaltAndPepper(clearText).getBytes(Charset.forName("UTF-8")));
-        return new String(digest);
+        return Base64.encodeBase64String(digest);
     }
 
     private static String applySaltAndPepper(String clearText) {
