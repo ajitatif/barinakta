@@ -1,2 +1,5 @@
 .idea/
-.gradle/
+**/.gradle/
+barinakta-api/build/
+barinakta.mv.db
+barinakta.trace.db
