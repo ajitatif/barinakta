@@ -6,6 +6,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.turkisi.barinakta.api.error.EntityNotFoundException;
 import org.turkisi.barinakta.api.model.*;
+import org.turkisi.barinakta.api.model.request.AnimalFriendRequestModel;
 import org.turkisi.barinakta.api.model.request.BreedRequestModel;
 import org.turkisi.barinakta.api.model.request.SpeciesRequestModel;
 import org.turkisi.barinakta.api.repo.AnimalFriendRepository;
@@ -41,23 +42,26 @@ public class AnimalFriendController {
     }
 
     @RequestMapping(path = "", consumes = "application/json", method = RequestMethod.POST)
-    public ResponseEntity<Void> savePet(AnimalFriend animalFriend, Long shelterId) throws EntityNotFoundException {
+    public ResponseEntity<Void> savePet(@RequestBody AnimalFriendRequestModel animalFriend) throws EntityNotFoundException {
 
-        Shelter shelter = shelterRepository.findOne(shelterId);
+        Shelter shelter = shelterRepository.findOne(animalFriend.getShelterId());
         if (shelter == null) {
-            throw new EntityNotFoundException("No shelter with ID " + shelterId);
+            throw new EntityNotFoundException("No shelter with ID " + animalFriend.getShelterId());
         }
-        animalFriend.setShelter(shelter);
-        AnimalFriend savedEntity = animalFriendRepository.save(animalFriend);
+        animalFriend.getAnimalFriend().setShelter(shelter);
+        AnimalFriend savedEntity = animalFriendRepository.save(animalFriend.getAnimalFriend());
 
         return ResponseEntity.created(URI.create("/pet/" + savedEntity.getId())).build();
     }
 
-    @RequestMapping(path = "", consumes = "application/json", method = RequestMethod.PUT)
+    @RequestMapping(path = "/{animalFriendId}", consumes = "application/json", method = RequestMethod.PUT)
     public
     @ResponseBody
-    AnimalFriend updatePet(Long animalFriendId, AnimalFriend animalFriend, Long shelterId) throws EntityNotFoundException {
+    AnimalFriend updatePet(@PathVariable("animalFriendId") Long animalFriendId, @RequestBody AnimalFriendRequestModel animalFriendRequestModel)
+            throws EntityNotFoundException {
 
+        AnimalFriend animalFriend = animalFriendRequestModel.getAnimalFriend();
+        Long shelterId = animalFriendRequestModel.getShelterId();
         Shelter shelter = shelterRepository.findOne(shelterId);
         if (shelter == null) {
             throw new EntityNotFoundException("No shelter with ID " + shelterId);

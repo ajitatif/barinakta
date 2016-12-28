@@ -9,4 +9,6 @@ import org.turkisi.barinakta.api.model.User;
  */
 @Transactional
 public interface UserRepository extends CrudRepository<User, Long> {
+
+    User findByUserName(String username);
 }

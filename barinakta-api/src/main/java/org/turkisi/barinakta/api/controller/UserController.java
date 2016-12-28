@@ -1,14 +1,20 @@
 package org.turkisi.barinakta.api.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.turkisi.barinakta.api.crypto.HashHelper;
+import org.turkisi.barinakta.api.error.AuthenticationException;
 import org.turkisi.barinakta.api.error.EntityNotFoundException;
 import org.turkisi.barinakta.api.model.User;
+import org.turkisi.barinakta.api.model.request.LoginRequestModel;
 import org.turkisi.barinakta.api.repo.UserRepository;
 
 import java.net.URI;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * @author Gökalp Gürbüzer (gokalp.gurbuzer@yandex.com)
@@ -16,6 +22,8 @@ import java.net.URI;
 @Controller
 @RequestMapping(path = "/user")
 public class UserController {
+
+    private static Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -55,5 +63,28 @@ public class UserController {
     @ResponseBody
     User getUser(@PathVariable(name = "userId") Long userId) {
         return userRepository.findOne(userId);
+    }
+
+    @RequestMapping(path = "/login", method = RequestMethod.POST, consumes = "application/json")
+    public
+    @ResponseBody
+    User login(@RequestBody LoginRequestModel loginRequest) throws AuthenticationException {
+
+        User user = userRepository.findByUserName(loginRequest.getUsername());
+        if (user == null || !isPasswordMatch(loginRequest.getPassword(), user.getPassword())) {
+            throw new AuthenticationException("Invalid username or password");
+        }
+
+        return user;
+    }
+
+    private boolean isPasswordMatch(String clearPassword, String hashedPassword) {
+
+        try {
+            return HashHelper.calculateHash(clearPassword).equals(hashedPassword);
+        } catch (NoSuchAlgorithmException e) {
+            logger.error("Cannot calculate MD5", e);
+            return false;
+        }
     }
 }
