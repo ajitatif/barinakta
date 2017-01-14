@@ -22,6 +22,7 @@ import java.util.Arrays;
  */
 @Controller
 @RequestMapping("/pet")
+@CrossOrigin(origins = "*")
 public class AnimalFriendController {
 
     private AnimalFriendRepository animalFriendRepository;

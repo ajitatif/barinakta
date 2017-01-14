@@ -21,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
  */
 @Controller
 @RequestMapping(path = "/user")
+@CrossOrigin(origins = "*")
 public class UserController {
 
     private static Logger logger = LoggerFactory.getLogger(UserController.class);

@@ -14,6 +14,7 @@ import java.net.URI;
  */
 @Controller
 @RequestMapping("/shelter")
+@CrossOrigin(origins = "*")
 public class ShelterController {
 
     private ShelterRepository shelterRepository;
