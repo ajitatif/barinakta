@@ -1,6 +1,5 @@
 package org.turkisi.barinakta.api.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -91,7 +90,7 @@ public class AnimalFriendController {
     @RequestMapping(path = "", method = RequestMethod.GET)
     public @ResponseBody Iterable<AnimalFriend> getAvailablePets() {
 
-        return animalFriendRepository.findByStatus(AnimalFriendStatus.AVAILABLE);
+        return animalFriendRepository.findByStatus(AnimalFriendStatus.LOOKING_FOR_HOME);
     }
 
     @RequestMapping(path = "/{animalFriendId}", consumes = "application/json", method = RequestMethod.PATCH)
